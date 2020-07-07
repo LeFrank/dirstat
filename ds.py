@@ -2,6 +2,7 @@ import sys
 import os
 import copy
 import math
+import time
 # import locale
 # locale.setlocale(locale.LC_ALL, 'en_US')
 
@@ -10,6 +11,10 @@ fileTypeAndCountObj = {"file_extension" : "", "count" : 0, "size": 0}
 dirSizeAndCountList = []
 dirSizeAndCountObj = {"directory" : "", "child_count" : 0, "size": 0}
 totalSizeOfFilesAndFolders = 0
+largestFile = {"filename": "" , "file_path" : "", "size" : 0}
+smallestFile = {"filename": "" , "file_path" : "", "size" : 0}
+file_size_array = []
+totalFilesIncludingSubDirectories = 0
 
 def convert_size(size_bytes):
    if size_bytes == 0:
@@ -28,30 +33,41 @@ def get_size(start_path):
             fp = os.path.join(dirpath, f)
             # skip if it is symbolic link
             if not os.path.islink(fp):
-                total_size += os.path.getsize(fp)
+                # age = os.path.getctime(fp)
+                # print("Created: %s" % time.ctime(age))
+                fsize = os.path.getsize(fp)
+                if fsize >= largestFile["size"]:
+                    largestFile["filename"] = f
+                    largestFile["file_path"] = fp
+                    largestFile["size"] = fsize
+                total_size += fsize
                 total_children += 1
 
     return [total_size, total_children]
 
 def updateFileTypeCount(fullPath, filename, ext, totalSizeOfFilesAndFolders):
-	extTypeobj = next((item for item in fileTypeAndCount if item["file_extension"] == ext), "")
+	# print(ext.strip())
+	if not bool(ext.strip()):
+		extTypeobj = next((item for item in fileTypeAndCount if item["file_extension"] == "None"), "")
+	else:
+		extTypeobj = next((item for item in fileTypeAndCount if item["file_extension"] == ext), "")
 	if len(fileTypeAndCount) == 0:
 		obj = copy.deepcopy(fileTypeAndCountObj)
-		print(obj["file_extension"])
+		# print(obj["file_extension"])
 		extension = ext
-		if not ext:
+		if not bool(ext.strip()):
 			extension = "None"
 		obj["file_extension"] = extension
 		obj["count"] = 1
 		obj["size"] = os.path.getsize(fullPath)
 		totalSizeOfFilesAndFolders += obj["size"]
 		fileTypeAndCount.append(obj)
-	elif extTypeobj == "":
+	elif extTypeobj == "" or not extTypeobj:
 		# print("list already has values, but does not contain ext: %s" % (ext))
 		obj = copy.deepcopy(fileTypeAndCountObj)
 		# print(obj["file_extension"])
 		extension = ext
-		if not ext:
+		if not bool(ext.strip()):
 			extension = "None"
 		obj["file_extension"] = extension
 		obj["count"] = 1
@@ -62,9 +78,22 @@ def updateFileTypeCount(fullPath, filename, ext, totalSizeOfFilesAndFolders):
 		extTypeobj["count"] += 1  
 		extTypeobj["size"] += os.path.getsize(fullPath)
 		totalSizeOfFilesAndFolders += extTypeobj["size"]
+		if extTypeobj["size"] >= largestFile["size"]:
+			largestFile["filename"] = filename
+			largestFile["file_path"] = fullPath
+			largestFile["size"] = extTypeobj["size"]
+		file_size_array.append(extTypeobj["size"])
+
 
 if __name__ == "__main__":
 	cwd = os.getcwd()
+	try:
+		fn = sys.argv[1]	
+		if os.path.exists(fn):
+			cwd = 	fn
+	except:
+		# print("failed to load path")
+		err = "y"
 	listOfFiles = os.listdir(cwd)
 	# slist  = listOfFiles.sort()
 	# print(slist)
@@ -77,6 +106,7 @@ if __name__ == "__main__":
 	symlinkCount = 0
 	NumFileTypes = 0
 	totalNumberOfObjects = len(listOfFiles)
+	totalFilesIncludingSubDirectories = 0
 
 	# print(listOfFiles)
 	allFiles = list()
@@ -90,6 +120,7 @@ if __name__ == "__main__":
 			obj = copy.deepcopy(dirSizeAndCountObj)
 			obj["directory"] = entry
 			obj["size"], obj["child_count"] = get_size(fullPath)
+			totalFilesIncludingSubDirectories += obj["child_count"]
 			dirSizeAndCountList.append(obj)
 			directoryCount += 1
 			totalSizeOfFilesAndFolders += obj["size"]
@@ -108,11 +139,11 @@ if __name__ == "__main__":
 	# print(allFiles)            
 	# return allFiles
 	print("--------------------------------------------------------------------------")
-	print("%-50s%-10s%-10s" % ("Directories", "# children", "Size"))	
+	print("%-50s%-15s%-10s" % ("Directories", "# children", "Size"))	
 	print("--------------------------------------------------------------------------")
 	dirSizeAndCountList = sorted(dirSizeAndCountList, key = lambda i: i['size'],reverse=True)
 	for entry in dirSizeAndCountList:
-		print("%-50s%-10s%10s" %(entry["directory"], '{:,}'.format(entry["child_count"]), convert_size(entry["size"])))
+		print("%-50s%-15s%10s" %(entry["directory"], '{:,}'.format(entry["child_count"]), convert_size(entry["size"])))
 	print("")
 	print("--------------------------------------------------------------------------")
 	print("%-50s%-10s%-10s" % ("Extension","Number", "Size"))
@@ -120,4 +151,15 @@ if __name__ == "__main__":
 	fileTypeAndCount = sorted(fileTypeAndCount, key = lambda i: i['size'],reverse=True)
 	for entry in fileTypeAndCount:
 		print("%-50s%-10s%10s" %( entry["file_extension"], entry["count"], convert_size(entry["size"])))
-
+	
+	print("--------------------------------------------------------------------------")
+	print("Largest File: ")
+	print("Path => %s" % (largestFile["file_path"] ))
+	print("Filename => %s" % (largestFile["filename"] ))
+	print("File Size => %s" % ( convert_size(largestFile["size"])))
+	print("--------------------------------------------------------------------------")		
+	print("")
+	# print("Average Filesize: %s" % ( convert_size( sum(file_size_array)/len(file_size_array))))
+	print("")
+	print("Total Number of Files in Child Folders: %s" %(totalFilesIncludingSubDirectories))
+	print("")
