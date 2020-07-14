@@ -3,6 +3,8 @@ import os
 import copy
 import math
 import time
+import datetime
+
 # import locale
 # locale.setlocale(locale.LC_ALL, 'en_US')
 
@@ -15,6 +17,8 @@ largestFile = {"filename": "" , "file_path" : "", "size" : 0}
 smallestFile = {"filename": "" , "file_path" : "", "size" : 0}
 file_size_array = []
 totalFilesIncludingSubDirectories = 0
+oldestFile = {"filename": "" , "file_path" : "", "date" : datetime.datetime.now()}
+youngestFile = {"filename": "" , "file_path" : "", "date" : datetime.datetime.now()}
 
 def convert_size(size_bytes):
    if size_bytes == 0:
@@ -26,6 +30,8 @@ def convert_size(size_bytes):
    return "%s %s" % (s, size_name[i])
 
 def get_size(start_path):
+    global oldestFile
+    global youngestFile
     total_size = 0
     total_children = 0
     for dirpath, dirnames, filenames in os.walk(start_path):
@@ -33,8 +39,17 @@ def get_size(start_path):
             fp = os.path.join(dirpath, f)
             # skip if it is symbolic link
             if not os.path.islink(fp):
-                # age = os.path.getctime(fp)
-                # print("Created: %s" % time.ctime(age))
+                age = datetime.datetime.fromtimestamp(os.path.getctime(fp))
+                oDate = oldestFile["date"]
+                yDate = youngestFile["date"]
+                if age > oDate:
+                    oldestFile["filename"] = f
+                    oldestFile["file_path"] = fp
+                    oldestFile["date"] = age
+                if  age < yDate:
+                    youngestFile["filename"] = f
+                    youngestFile["file_path"] = fp
+                    youngestFile["date"] = age
                 fsize = os.path.getsize(fp)
                 if fsize >= largestFile["size"]:
                     largestFile["filename"] = f
@@ -46,6 +61,8 @@ def get_size(start_path):
     return [total_size, total_children]
 
 def updateFileTypeCount(fullPath, filename, ext, totalSizeOfFilesAndFolders):
+	global oldestFile
+	global youngestFile
 	# print(ext.strip())
 	if not bool(ext.strip()):
 		extTypeobj = next((item for item in fileTypeAndCount if item["file_extension"] == "None"), "")
@@ -60,6 +77,10 @@ def updateFileTypeCount(fullPath, filename, ext, totalSizeOfFilesAndFolders):
 		obj["file_extension"] = extension
 		obj["count"] = 1
 		obj["size"] = os.path.getsize(fullPath)
+		# if obj["size"] >= largestFile["size"]:
+		# 	largestFile["filename"] = filename
+		# 	largestFile["file_path"] = fullPath
+		# 	largestFile["size"] = obj["size"]
 		totalSizeOfFilesAndFolders += obj["size"]
 		fileTypeAndCount.append(obj)
 	elif extTypeobj == "" or not extTypeobj:
@@ -72,16 +93,29 @@ def updateFileTypeCount(fullPath, filename, ext, totalSizeOfFilesAndFolders):
 		obj["file_extension"] = extension
 		obj["count"] = 1
 		obj["size"] = os.path.getsize(fullPath)
+		# if obj["size"] >= largestFile["size"]:
+		# 	largestFile["filename"] = filename
+		# 	largestFile["file_path"] = fullPath
+		# 	largestFile["size"] = obj["size"]
 		fileTypeAndCount.append(obj)
 		totalSizeOfFilesAndFolders += obj["size"]
 	else:
 		extTypeobj["count"] += 1  
 		extTypeobj["size"] += os.path.getsize(fullPath)
+		age = datetime.datetime.fromtimestamp(os.path.getctime(fullPath))
+		if age > oldestFile["date"]:
+			oldestFile["filename"] = filename
+			oldestFile["file_path"] = fullPath
+			oldestFile["date"] = age
+		if age < youngestFile["date"]:
+			youngestFile["filename"] = filename
+			youngestFile["file_path"] = fullPath
+			youngestFile["date"] = age
+		# if extTypeobj["size"] >= largestFile["size"]:
+		# 	largestFile["filename"] = filename
+		# 	largestFile["file_path"] = fullPath
+		# 	largestFile["size"] = extTypeobj["size"]
 		totalSizeOfFilesAndFolders += extTypeobj["size"]
-		if extTypeobj["size"] >= largestFile["size"]:
-			largestFile["filename"] = filename
-			largestFile["file_path"] = fullPath
-			largestFile["size"] = extTypeobj["size"]
 		file_size_array.append(extTypeobj["size"])
 
 
@@ -95,6 +129,7 @@ if __name__ == "__main__":
 		# print("failed to load path")
 		err = "y"
 	listOfFiles = os.listdir(cwd)
+
 	# slist  = listOfFiles.sort()
 	# print(slist)
 	fileCount = 0
@@ -154,12 +189,18 @@ if __name__ == "__main__":
 	
 	print("--------------------------------------------------------------------------")
 	print("Largest File: ")
+	print("File Size => %s" % ( convert_size(largestFile["size"])))
 	print("Path => %s" % (largestFile["file_path"] ))
 	print("Filename => %s" % (largestFile["filename"] ))
-	print("File Size => %s" % ( convert_size(largestFile["size"])))
 	print("--------------------------------------------------------------------------")		
 	print("")
 	# print("Average Filesize: %s" % ( convert_size( sum(file_size_array)/len(file_size_array))))
 	print("")
 	print("Total Number of Files in Child Folders: %s" %(totalFilesIncludingSubDirectories))
+	print("")
+	print("--------------------------------------------------------------------------")		
+	print("")
+	print("Youngest File > Date: %s, Filename: %s, File Path: %s" % (youngestFile["date"], youngestFile["filename"], youngestFile["file_path"]))
+	print("")
+	print("Oldest File: > Date: %s, Filename: %s, File Path: %s" % (oldestFile["date"], oldestFile["filename"], oldestFile["file_path"]))
 	print("")
