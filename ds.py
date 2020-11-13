@@ -17,8 +17,8 @@ largestFile = {"filename": "" , "file_path" : "", "size" : 0}
 smallestFile = {"filename": "" , "file_path" : "", "size" : 0}
 file_size_array = []
 totalFilesIncludingSubDirectories = 0
-oldestFile = {"filename": "" , "file_path" : "", "date" : datetime.datetime.now()}
-youngestFile = {"filename": "" , "file_path" : "", "date" : datetime.datetime.now()}
+oldestFile = {"filename": "" , "file_path" : "", "date" : 0}
+youngestFile = {"filename": "" , "file_path" : "", "date" : 0}
 
 def convert_size(size_bytes):
    if size_bytes == 0:
@@ -42,11 +42,11 @@ def get_size(start_path):
                 age = datetime.datetime.fromtimestamp(os.path.getctime(fp))
                 oDate = oldestFile["date"]
                 yDate = youngestFile["date"]
-                if age > oDate:
+                if oldestFile["date"] == 0 or age < oDate:
                     oldestFile["filename"] = f
                     oldestFile["file_path"] = fp
                     oldestFile["date"] = age
-                if  age < yDate:
+                if youngestFile["date"] == 0 or age > yDate:
                     youngestFile["filename"] = f
                     youngestFile["file_path"] = fp
                     youngestFile["date"] = age
@@ -103,11 +103,11 @@ def updateFileTypeCount(fullPath, filename, ext, totalSizeOfFilesAndFolders):
 		extTypeobj["count"] += 1  
 		extTypeobj["size"] += os.path.getsize(fullPath)
 		age = datetime.datetime.fromtimestamp(os.path.getctime(fullPath))
-		if age > oldestFile["date"]:
+		if oldestFile["date"] == 0 or age > oldestFile["date"]:
 			oldestFile["filename"] = filename
 			oldestFile["file_path"] = fullPath
 			oldestFile["date"] = age
-		if age < youngestFile["date"]:
+		if youngestFile["date"] == 0 or age < youngestFile["date"] :
 			youngestFile["filename"] = filename
 			youngestFile["file_path"] = fullPath
 			youngestFile["date"] = age
