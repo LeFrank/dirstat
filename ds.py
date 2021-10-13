@@ -4,9 +4,31 @@ import copy
 import math
 import time
 import datetime
+from rich import print, inspect
+from rich.console import Console
+from rich.table import Table
+from rich.progress import track
+console = Console()
+# print("Hello, [bold blue]Towards Data Science[/bold blue]!", ":thumbs_up:", "[u]By[/u]", "[i]Christopher Tao[/i]")
 
 # import locale
 # locale.setlocale(locale.LC_ALL, 'en_US')
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
+#print(bcolors.WARNING + "Warning: No active frommets remain. Continue?" + bcolors.ENDC)
+
+
 
 fileTypeAndCount = []
 fileTypeAndCountObj = {"file_extension" : "", "count" : 0, "size": 0}
@@ -30,8 +52,8 @@ def convert_size(size_bytes):
    return "%s %s" % (s, size_name[i])
 
 def get_size(start_path):
-    global oldestFile
-    global youngestFile
+    # global oldestFile
+    # global youngestFile
     total_size = 0
     total_children = 0
     for dirpath, dirnames, filenames in os.walk(start_path):
@@ -39,30 +61,36 @@ def get_size(start_path):
             fp = os.path.join(dirpath, f)
             # skip if it is symbolic link
             if not os.path.islink(fp):
-                age = datetime.datetime.fromtimestamp(os.path.getctime(fp))
-                oDate = oldestFile["date"]
-                yDate = youngestFile["date"]
-                if oldestFile["date"] == 0 or age < oDate:
-                    oldestFile["filename"] = f
-                    oldestFile["file_path"] = fp
-                    oldestFile["date"] = age
-                if youngestFile["date"] == 0 or age > yDate:
-                    youngestFile["filename"] = f
-                    youngestFile["file_path"] = fp
-                    youngestFile["date"] = age
-                fsize = os.path.getsize(fp)
-                if fsize >= largestFile["size"]:
-                    largestFile["filename"] = f
-                    largestFile["file_path"] = fp
-                    largestFile["size"] = fsize
-                total_size += fsize
-                total_children += 1
+                try:
+                    age = datetime.datetime.fromtimestamp(os.path.getctime(fp))
+                    oDate = oldestFile["date"]
+                    yDate = youngestFile["date"]
+                    # print(age)
+                    # print(oDate)
+                    if oldestFile["date"] == 0 or age.time() < oDate.time():
+                        oldestFile["filename"] = f
+                        oldestFile["file_path"] = fp
+                        oldestFile["date"] = age
+                    if youngestFile["date"] == 0 or age.time() > yDate.time():
+                        youngestFile["filename"] = f
+                        youngestFile["file_path"] = fp
+                        youngestFile["date"] = age
+                    fsize = os.path.getsize(fp)
+                    if fsize >= largestFile["size"]:
+                        largestFile["filename"] = f
+                        largestFile["file_path"] = fp
+                        largestFile["size"] = fsize
+                    total_size += fsize
+                    total_children += 1
+                except:
+                    #print("Skipped")
+                    antt = ""
 
     return [total_size, total_children]
 
 def updateFileTypeCount(fullPath, filename, ext, totalSizeOfFilesAndFolders):
-	global oldestFile
-	global youngestFile
+	# global oldestFile
+	# global youngestFile
 	# print(ext.strip())
 	if not bool(ext.strip()):
 		extTypeobj = next((item for item in fileTypeAndCount if item["file_extension"] == "None"), "")
@@ -103,11 +131,11 @@ def updateFileTypeCount(fullPath, filename, ext, totalSizeOfFilesAndFolders):
 		extTypeobj["count"] += 1  
 		extTypeobj["size"] += os.path.getsize(fullPath)
 		age = datetime.datetime.fromtimestamp(os.path.getctime(fullPath))
-		if oldestFile["date"] == 0 or age > oldestFile["date"]:
+		if oldestFile["date"] == 0 or age.time() < oldestFile["date"].time():
 			oldestFile["filename"] = filename
 			oldestFile["file_path"] = fullPath
 			oldestFile["date"] = age
-		if youngestFile["date"] == 0 or age < youngestFile["date"] :
+		if youngestFile["date"] == 0 or age.time() > youngestFile["date"].time() :
 			youngestFile["filename"] = filename
 			youngestFile["file_path"] = fullPath
 			youngestFile["date"] = age
@@ -145,8 +173,9 @@ if __name__ == "__main__":
 
 	# print(listOfFiles)
 	allFiles = list()
+
 	# Iterate over all the entries
-	for entry in listOfFiles:
+	for entry in track(listOfFiles, description="Calculating Files", get_time=None):
 		# Create full path
 		fullPath = os.path.join(cwd, entry)
 		# If entry is a directory then get the list of files in this directory 
@@ -173,20 +202,39 @@ if __name__ == "__main__":
 	# print(fileTypeAndCount)
 	# print(allFiles)            
 	# return allFiles
-	print("--------------------------------------------------------------------------")
-	print("%-50s%-15s%-10s" % ("Directories", "# children", "Size"))	
-	print("--------------------------------------------------------------------------")
+	# print("--------------------------------------------------------------------------")
+	# print("%-50s%-15s%-10s" % ("Directories", "# children", "Size"))	
+	# print("--------------------------------------------------------------------------")
+	table = Table(show_header=True, header_style="bold magenta")
+	table.add_column("Directories", style="dim", width=12)
+	table.add_column("# children", justify="right")
+	table.add_column("Size", justify="right")
 	dirSizeAndCountList = sorted(dirSizeAndCountList, key = lambda i: i['size'],reverse=True)
 	for entry in dirSizeAndCountList:
-		print("%-50s%-15s%10s" %(entry["directory"], '{:,}'.format(entry["child_count"]), convert_size(entry["size"])))
+		# print("%-50s%-15s%10s" %(entry["directory"], '{:,}'.format(entry["child_count"]), convert_size(entry["size"])))
+		table.add_row(
+			entry["directory"], '{:,}'.format(entry["child_count"]), convert_size(entry["size"])
+		)
+	console.print(table)
 	print("")
-	print("--------------------------------------------------------------------------")
-	print("%-50s%-10s%-10s" % ("Extension","Number", "Size"))
-	print("--------------------------------------------------------------------------")
+	# print("--------------------------------------------------------------------------")
+	# print("%-50s%-10s%-10s" % ("Extension","Number", "Size"))
+	# print("--------------------------------------------------------------------------")
+	table = Table(show_header=True, header_style="bold magenta")
+	table.add_column("Extension")
+	table.add_column("Number", justify="right")
+	table.add_column("Size", justify="right")
 	fileTypeAndCount = sorted(fileTypeAndCount, key = lambda i: i['size'],reverse=True)
 	for entry in fileTypeAndCount:
-		print("%-50s%-10s%10s" %( entry["file_extension"], entry["count"], convert_size(entry["size"])))
+		# print("%-50s%-15s%10s" %(entry["directory"], '{:,}'.format(entry["child_count"]), convert_size(entry["size"])))
+		table.add_row(
+			entry["file_extension"], '{:,}'.format(entry["count"]), convert_size(entry["size"])
+		)
 	
+	# fileTypeAndCount = sorted(fileTypeAndCount, key = lambda i: i['size'],reverse=True)
+	# for entry in fileTypeAndCount:
+	# 	print("%-50s%-10s%10s" %( entry["file_extension"], entry["count"], convert_size(entry["size"])))
+	console.print(table)
 	print("--------------------------------------------------------------------------")
 	print("Largest File: ")
 	print("File Size => %s" % ( convert_size(largestFile["size"])))
@@ -204,3 +252,28 @@ if __name__ == "__main__":
 	print("")
 	print("Oldest File: > Date: %s, Filename: %s, File Path: %s" % (oldestFile["date"], oldestFile["filename"], oldestFile["file_path"]))
 	print("")
+
+
+
+
+# table = Table(show_header=True, header_style="bold magenta")
+# table.add_column("Date", style="dim", width=12)
+# table.add_column("Title")
+# table.add_column("Production Budget", justify="right")
+# table.add_column("Box Office", justify="right")
+# table.add_row(
+#     "Dev 20, 2019", "Star Wars: The Rise of Skywalker", "$275,000,000", "$375,126,118"
+# )
+# table.add_row(
+#     "May 25, 2018",
+#     "[red]Solo[/red]: A Star Wars Story",
+#     "$275,000,000",
+#     "$393,151,347",
+# )
+# table.add_row(
+#     "Dec 15, 2017",
+#     "Star Wars Ep. VIII: The Last Jedi",
+#     "$262,000,000",
+#     "[bold]$1,332,539,889[/bold]",
+# )
+# console.print(table)
