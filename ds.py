@@ -206,7 +206,7 @@ if __name__ == "__main__":
 	# print("%-50s%-15s%-10s" % ("Directories", "# children", "Size"))	
 	# print("--------------------------------------------------------------------------")
 	table = Table(show_header=True, header_style="bold magenta")
-	table.add_column("Directories", style="dim", width=12)
+	table.add_column("Directories", style="dim", width=40)
 	table.add_column("# children", justify="right")
 	table.add_column("Size", justify="right")
 	dirSizeAndCountList = sorted(dirSizeAndCountList, key = lambda i: i['size'],reverse=True)
